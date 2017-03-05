@@ -1,5 +1,7 @@
+#!/usr/bin/env python3
 from flask import Flask, jsonify
 from collections import Counter
+import sys
 import graph
 
 app = Flask(__name__)
@@ -27,3 +29,11 @@ def get_edits_per_day(username):
   for date, count in graph.get_edits_per_day(username, time_limit=365):
     date_counts[date] = count
   return jsonify(date_counts)
+
+if __name__ == '__main__':
+  if len(sys.argv) > 1 and sys.argv[1].lower().startswith('dev'):
+    app.debug = True
+    app.run(host='127.0.0.1', port=5000)
+  else:
+    app.debug = False
+    app.run(host='0.0.0.0', port=80)
