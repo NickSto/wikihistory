@@ -43,7 +43,7 @@ labelSvg.selectAll('.day-label').data(dayLabels).enter()
 var currDate = new Date();
 var startDate = new Date(new Date().setFullYear(currDate.getFullYear() - 1));
 var randomData = function() {
-  return d3.timeDays(startDate, currDate).map(function(d) {
+  return d3.timeDays(d3.timeDay(startDate), currDate).map(function(d) {
     return {
       time: d,
       value: Math.floor(Math.random() * (50))
@@ -56,16 +56,21 @@ var weekOfYear = function(week) {
   return d3.timeWeek.count(d3.timeWeek(startDate), week);
 };
 var timeParse = d3.timeParse('%Y-%m-%d');
+var timeFormat = d3.timeFormat('%Y-%m-%d');
 var monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sept', 'Oct', 'Nov', 'Dec'];
 
-
+var userDataLoader;
 var loadData = function() {
-  d3.select('#username-spinner').transition().style('opacity', 1);
   var username = usernameInput.value;
+  var cancel = false;
   if (username) {
-    d3.json('/edits/' + username, function(err, data) {
-      var a = [];
-      a = d3.timeDays(startDate, currDate).map(function(d) {
+    d3.select('#username-spinner').transition().style('opacity', 1);
+    d3.json('/edits_per_day/' + username, function(err, data) {
+      if (cancel) {
+        return;
+      }
+      currUser = username;
+      var days = d3.timeDay.range(d3.timeDay(startDate), currDate).map(function(d) {
         return {
           time: d,
           value: 0
@@ -75,16 +80,21 @@ var loadData = function() {
       for (key in data) {
         if (data.hasOwnProperty(key)) {
           var day = d3.timeDay.count(d3.timeDay(startDate), timeParse(key));
-          if (day < a.length && day > 0) {
-            a[day].value += data[key];
+          if (day < days.length && day >= 0) {
+            days[day].value += data[key];
           }
         }
       }
-      updateData(a);
+      updateData(days);
     });
   } else {
     updateData(randomData());
   }
+  userDataLoader = {
+    cancel: function() {
+      cancel = true;
+    }
+  };
 };
 
 var updateData = function(data) {
@@ -93,14 +103,14 @@ var updateData = function(data) {
     return d.value;
   })]);
   d3.select('#username-spinner').transition().duration(1000).style('opacity', 0);
-  var dayRects = rectSelect.enter().append('rect')
+  var dayRects = daySelect.enter().append('rect')
     .classed('day', true)
     .attr('width', cellSize)
     .attr('height', cellSize)
     .style('fill', '#fff')
     .on('click', loadDayInfo);
   dayRects.append('title');
-  dayRects = rects.merge(daySelect);
+  dayRects = dayRects.merge(daySelect);
   daySelect.exit().remove();
   dayRects.select('title')
     .text(function(d) {
@@ -141,46 +151,56 @@ var updateData = function(data) {
   });
   monthLabelSelect.exit().remove();
 };
-
+var currUser = '';
 var loadDayInfo = function (d) {
+  if(!currUser) {
+    return;
+  }
   d3.select('#dayinfo-spinner').transition().duration(1000).style('opacity', 1);
-  setTimeout(function() {
+  d3.json('/day_edits/'+currUser+'/'+timeFormat(d.time), function(err, data) {
     updateDayInfo({
-      articles: [{
-        name: 'placeholder',
-        count: 2
-      }]
+      time: d.time,
+      articles: data.map(function(d){
+        return {
+          name: d.title,
+          articleLink: 'http://en.wikipedia.org/wiki/'+d.title,
+          count: d.edits
+        }
+      })
     });
-  }, 1000);
+  });
 };
 
+var dayInfoTable = d3.select('#dayinfo-table');
 var updateDayInfo = function(dayInfo) {
   d3.select('#dayinfo-spinner').transition().duration(1000).style('opacity', 0);
-  if (!dayInfoSelection || dayInfoSelection.empty()) {
-    dayInfoSelection = d3.select('#results-info').append('div');
-  }
-  var sel = dayInfoSelection;
-  var selUpdate = sel.selectAll('.article')
+  var sel = dayInfoTable;
+  var selUpdate = sel.selectAll('.article-row')
     .data(dayInfo.articles);
   var newSel = selUpdate.enter()
-    .append('div')
-    .classed('article', true);
-  newSel.append('span').classed('article-name', true);
-  newSel.append('span').classed('article-count', true);
-  selUpdate = newSel.merge(selUpdate);
+    .append('tr')
+    .classed('article-row', true);
+  newSel.append('td').classed('article-name', true);
+  newSel.append('td').classed('article-count', true);
+  var sel = newSel.merge(selUpdate);
   if (dayInfo.articles.length) {
-    selUpdate.select('.article-name').html(function(d) {
-      return d.name;
+    sel.select('.article-name').html(function(d) {
+      return '<a href="'+d.articleLink+'">' + d.name + '</a>';
     });
-    selUpdate.select('.article-count').html(function(d) {
+    sel.select('.article-count').html(function(d) {
       return d.count;
     });
+    d3.select('#dayinfo-status').html('Edits on '+timeFormat(dayInfo.time));
   } else {
-    sel.html('No edits on ' + dayInfo.date);
+    d3.select('#dayinfo-status').html('No edits on ' + timeFormat(dayInfo.time));
   }
   selUpdate.exit().remove();
 };
 
+/*d3.select('#input-form').node().addEventListener('submit', function(e) {
+  e.preventDefault();
+});
+*/
 usernameInput.addEventListener('change', function() {
   loadData();
 });
