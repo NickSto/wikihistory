@@ -93,7 +93,6 @@ var updateData = function(data) {
     return d.value;
   })]);
   d3.select('#username-spinner').transition().duration(1000).style('opacity', 0);
-  debugger;
   var dayRects = daySelect.enter().append('rect')
     .classed('day', true)
     .attr('width', cellSize)
