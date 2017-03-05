@@ -11,7 +11,9 @@ import argparse
 import urllib.request
 
 ARG_DEFAULTS = {'log':sys.stderr, 'volume':logging.ERROR}
-DESCRIPTION = """"""
+DESCRIPTION = """Get a user's whole edit history. Currently prints the time and page name of the
+edit."""
+USAGE = '$ %(prog)s UserName > edits.txt'
 
 # https://en.wikipedia.org/w/api.php?action=query&format=json&list=usercontribs&formatversion=2
 # &uclimit=max&ucuser=Qwerty0&uccontinue=20110307123212|417593116
@@ -25,12 +27,13 @@ API_STATIC_PARAMS = {'action':'query', 'format':'json', 'list':'usercontribs', '
 
 def make_argparser():
 
-  parser = argparse.ArgumentParser(description=DESCRIPTION)
+  parser = argparse.ArgumentParser(description=DESCRIPTION, usage=USAGE)
   parser.set_defaults(**ARG_DEFAULTS)
 
   parser.add_argument('user',
-    help='')
-  parser.add_argument('-l', '--limit', type=int)
+    help='The user to query.')
+  parser.add_argument('-l', '--limit', type=int,
+    help='Limit the number of edits retrieved to this number.')
   parser.add_argument('-L', '--log', type=argparse.FileType('w'),
     help='Print log messages to this file instead of to stderr. Warning: Will overwrite the file.')
   parser.add_argument('-q', '--quiet', dest='volume', action='store_const', const=logging.CRITICAL)
@@ -48,16 +51,26 @@ def main(argv):
   logging.basicConfig(stream=args.log, level=args.volume, format='%(message)s')
   tone_down_logger()
 
+  for edit in get_edits(args.user, args.limit):
+    print(edit['timestamp'], edit['title'], sep='\t')
+
+
+def get_edits(user, limit=None):
+
+  total_edits = 0
   cont = None
   while True:
 
-    data = get_data(args.user, cont)
+    data = get_data(user, cont)
 
     if 'error' in data:
       fail('API Error: {}\ninfo: {}'.format(data['error']['code'], data['error']['info']))
 
     for edit in data['query']['usercontribs']:
-      print(edit['timestamp'], edit['title'], sep='\t')
+      total_edits += 1
+      if limit and total_edits > limit:
+        return
+      yield edit
 
     if 'continue' in data:
       cont = data['continue']['uccontinue']
