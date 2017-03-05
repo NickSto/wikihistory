@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css">
+  <style>
+    .day-label,
+    .month-label {
+      font-family: sans-serif;
+    }
+    
+    .day {
+      fill: #fff;
+      stroke: #ccc;
+      cursor: pointer;
+    }
+    
+    .spinner {
+      position: relative;
+    }
+    
+    .article {
+      cursor: pointer;
+    }
+    
+    #dayinfo-spinner {
+      position: absolute;
+      left: 50%;
+    }
+  </style>
+</head>
+
+<body>
+  <script src="spin.js"></script>
+  <script src="https://d3js.org/d3.v4.min.js"></script>
+  <div class="container">
+    <label>Username: <input id="username-input" placeholder="Username"></label><span id="username-spinner" class="spinner"></span>
+    <svg id="svg-calendar"></svg>
+    <div id="results">
+      <div id="dayinfo-spinner" class="spinner"></div>
+      <div id="results-info"></div>
+    </div>
+  </div>
+  <script src="script.js"></script>
+</body>
+
+</html>
