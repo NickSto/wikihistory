@@ -1,0 +1,109 @@
+#!/usr/bin/env python3
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
+from __future__ import unicode_literals
+import sys
+import json
+import errno
+import logging
+import argparse
+import urllib.request
+
+ARG_DEFAULTS = {'log':sys.stderr, 'volume':logging.ERROR}
+DESCRIPTION = """"""
+
+# https://en.wikipedia.org/w/api.php?action=query&format=json&list=usercontribs&formatversion=2
+# &uclimit=max&ucuser=Qwerty0&uccontinue=20110307123212|417593116
+
+API_SCHEME = 'https'
+API_DOMAIN = 'en.wikipedia.org'
+API_PATH = '/w/api.php'
+API_STATIC_PARAMS = {'action':'query', 'format':'json', 'list':'usercontribs', 'formatversion':'2',
+                     'uclimit':'max'}
+
+
+def make_argparser():
+
+  parser = argparse.ArgumentParser(description=DESCRIPTION)
+  parser.set_defaults(**ARG_DEFAULTS)
+
+  parser.add_argument('user',
+    help='')
+  parser.add_argument('-l', '--limit', type=int)
+  parser.add_argument('-L', '--log', type=argparse.FileType('w'),
+    help='Print log messages to this file instead of to stderr. Warning: Will overwrite the file.')
+  parser.add_argument('-q', '--quiet', dest='volume', action='store_const', const=logging.CRITICAL)
+  parser.add_argument('-v', '--verbose', dest='volume', action='store_const', const=logging.INFO)
+  parser.add_argument('-D', '--debug', dest='volume', action='store_const', const=logging.DEBUG)
+
+  return parser
+
+
+def main(argv):
+
+  parser = make_argparser()
+  args = parser.parse_args(argv[1:])
+
+  logging.basicConfig(stream=args.log, level=args.volume, format='%(message)s')
+  tone_down_logger()
+
+  cont = None
+  while True:
+
+    data = get_data(args.user, cont)
+
+    if 'error' in data:
+      fail('API Error: {}\ninfo: {}'.format(data['error']['code'], data['error']['info']))
+
+    for edit in data['query']['usercontribs']:
+      print(edit['timestamp'], edit['title'], sep='\t')
+
+    if 'continue' in data:
+      cont = data['continue']['uccontinue']
+    else:
+      break
+
+
+def make_url(user, cont=None):
+  params = API_STATIC_PARAMS.copy()
+  params['ucuser'] = user
+  if cont:
+    params['uccontinue'] = cont
+  query_string = urllib.parse.urlencode(params)
+  return urllib.parse.urlunparse((API_SCHEME, API_DOMAIN, API_PATH, None, query_string, None))
+
+
+def get_data(user, cont):
+  url = make_url(user, cont)
+  logging.info(url)
+  response = urllib.request.urlopen(url)
+  if response.getcode() == 200:
+    response_bytes = response.read()
+    return json.loads(str(response_bytes, 'utf8'))
+  else:
+    fail('API returned an HTTP error {}: {}'.format(response.getcode(), response.reason))
+
+
+def tone_down_logger():
+  """Change the logging level names from all-caps to capitalized lowercase.
+  E.g. "WARNING" -> "Warning" (turn down the volume a bit in your log files)"""
+  for level in (logging.CRITICAL, logging.ERROR, logging.WARNING, logging.INFO, logging.DEBUG):
+    level_name = logging.getLevelName(level)
+    logging.addLevelName(level, level_name.capitalize())
+
+
+def fail(message):
+  logging.critical(message)
+  if __name__ == '__main__':
+    sys.exit(1)
+  else:
+    raise Exception('Unrecoverable error')
+
+
+if __name__ == '__main__':
+  try:
+    sys.exit(main(sys.argv))
+  except IOError as ioe:
+    if ioe.errno != errno.EPIPE:
+      raise
