@@ -11,8 +11,13 @@ def serve_static(path):
 
 @app.route('/edits/<username>')
 def get_edits(username):
-    data = graph.get_edits(username);
-    data = [d['timestamp'].split('T')[0] for d in data]
-    counts = Counter(data)
-    json = jsonify(counts)
-    return json
+  edits = list(graph.get_edits(username, time_limit=365))
+  return jsonify(edits)
+
+
+@app.route('/edits_per_day/<username>')
+def get_edits_per_day(username):
+  date_counts = {}
+  for date, count in graph.get_edits_per_day(username, time_limit=365):
+    date_counts[date] = count
+  return jsonify(date_counts)

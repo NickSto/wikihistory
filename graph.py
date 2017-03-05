@@ -8,6 +8,7 @@ import json
 import errno
 import logging
 import argparse
+import collections
 import urllib.request
 from datetime import datetime, timedelta
 
@@ -52,11 +53,14 @@ def main(argv):
   logging.basicConfig(stream=args.log, level=args.volume, format='%(message)s')
   tone_down_logger()
 
-  for edit in get_edits(args.user, args.limit):
-    print(edit['timestamp'], edit['title'], sep='\t')
+  # for edit in get_edits(args.user, args.limit):
+  #   print(edit['timestamp'], edit['title'], sep='\t')
+  for date, count in get_edits_per_day(args.user, args.limit):
+    print(date, count, sep='\t')
 
 
-def get_edits(user, limit=None):
+def get_edits(user, limit=None, time_limit=None):
+  """time_limit in days"""
 
   total_edits = 0
   cont = None
@@ -70,18 +74,37 @@ def get_edits(user, limit=None):
     for edit in data['query']['usercontribs']:
       formatted_time = datetime.strptime(edit['timestamp'], '%Y-%m-%dT%H:%M:%SZ')
 
-      if formatted_time < datetime.now() - timedelta(days=365):
-        break
+      if time_limit and formatted_time < datetime.now() - timedelta(days=time_limit):
+        return
 
       total_edits += 1
       if limit and total_edits > limit:
         return
+
       yield edit
 
     if 'continue' in data:
       cont = data['continue']['uccontinue']
     else:
-      break 
+      break
+
+
+def get_edits_per_day(user, limit=None, time_limit=None):
+  #TODO: Take timezone into account.
+
+  last = None
+  date_count = 0
+  for edit in get_edits(user, limit=limit, time_limit=time_limit):
+    date = edit['timestamp'].split('T')[0]
+    if date != last:
+      if last is not None:
+        yield last, date_count
+      date_count = 0
+      last = date
+    date_count += 1
+  if last is not None:
+    yield last, date_count
+
 
 def make_url(user, cont=None):
   params = API_STATIC_PARAMS.copy()
