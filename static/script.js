@@ -93,14 +93,15 @@ var updateData = function(data) {
     return d.value;
   })]);
   d3.select('#username-spinner').transition().duration(1000).style('opacity', 0);
-  var dayRects = rectSelect.enter().append('rect')
+  debugger;
+  var dayRects = daySelect.enter().append('rect')
     .classed('day', true)
     .attr('width', cellSize)
     .attr('height', cellSize)
     .style('fill', '#fff')
     .on('click', loadDayInfo);
   dayRects.append('title');
-  dayRects = rects.merge(daySelect);
+  dayRects = dayRects.merge(daySelect);
   daySelect.exit().remove();
   dayRects.select('title')
     .text(function(d) {
