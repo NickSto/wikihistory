@@ -9,6 +9,7 @@ import errno
 import logging
 import argparse
 import urllib.request
+from datetime import datetime, timedelta
 
 ARG_DEFAULTS = {'log':sys.stderr, 'volume':logging.ERROR}
 DESCRIPTION = """Get a user's whole edit history. Currently prints the time and page name of the
@@ -67,6 +68,11 @@ def get_edits(user, limit=None):
       fail('API Error: {}\ninfo: {}'.format(data['error']['code'], data['error']['info']))
 
     for edit in data['query']['usercontribs']:
+      formatted_time = datetime.strptime(edit['timestamp'], '%Y-%m-%dT%H:%M:%SZ')
+
+      if formatted_time < datetime.now() - timedelta(days=365):
+        break
+
       total_edits += 1
       if limit and total_edits > limit:
         return
@@ -75,8 +81,7 @@ def get_edits(user, limit=None):
     if 'continue' in data:
       cont = data['continue']['uccontinue']
     else:
-      break
-
+      break 
 
 def make_url(user, cont=None):
   params = API_STATIC_PARAMS.copy()

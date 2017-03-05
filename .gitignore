@@ -1,2 +1,5 @@
 __pycache__
 *.pyc
+node_modules/
+package.json
+.idea/
