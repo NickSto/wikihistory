@@ -15,6 +15,12 @@ def get_edits(username):
   return jsonify(edits)
 
 
+@app.route('/day_edits/<username>/<date>')
+def get_edits_for_day(username, date):
+  edits = list(graph.get_edits_for_day(username, date))
+  return jsonify(edits)
+
+
 @app.route('/edits_per_day/<username>')
 def get_edits_per_day(username):
   date_counts = {}
