@@ -4,6 +4,11 @@ import graph
 
 app = Flask(__name__)
 
+@app.route('/static/<path:path>')
+def serve_static(path):
+  return send_from_directory('static', path)
+
+
 @app.route('/edits/<username>')
 def get_edits(username):
     data = graph.get_edits(username);
