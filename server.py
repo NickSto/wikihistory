@@ -2,7 +2,7 @@
 from flask import Flask, jsonify
 from collections import Counter
 import sys
-import graph
+import wikiedits
 
 app = Flask(__name__)
 
@@ -13,20 +13,20 @@ def serve_static(path):
 
 @app.route('/edits/<username>')
 def get_edits(username):
-  edits = list(graph.get_edits(username, time_limit=365))
+  edits = list(wikiedits.get_edits(username, time_limit=365))
   return jsonify(edits)
 
 
 @app.route('/day_edits/<username>/<date>')
 def get_edits_for_day(username, date):
-  edits = list(graph.get_edits_for_day(username, date))
+  edits = list(wikiedits.get_edits_for_day(username, date))
   return jsonify(edits)
 
 
 @app.route('/edits_per_day/<username>')
 def get_edits_per_day(username):
   date_counts = {}
-  for date, count in graph.get_edits_per_day(username, time_limit=365):
+  for date, count in wikiedits.get_edits_per_day(username, time_limit=365):
     date_counts[date] = count
   return jsonify(date_counts)
 
