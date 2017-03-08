@@ -1,10 +1,20 @@
-var width = 960;
-var height = 180;
+var width;
+var height;
+var margin = {
+  top: 24,
+  bottom: 10,
+  left: 38,
+  right: 10
+};
+var maxWeeks = 54;
 var cellSize = 16;
 var legendPadding = cellSize / 4;
-var legendOffset = 725;
-var legendTextPadding = 8;
 var numLegendBoxes = 5;
+var legendTextPadding = 6;
+var legendOffsetX = margin.left + cellSize * (maxWeeks - 2) - Math.ceil(64 / cellSize) * cellSize - (numLegendBoxes - 1) * (legendPadding + cellSize);
+var legendOffsetY = margin.top + cellSize * 8;
+height = legendOffsetY + cellSize + margin.bottom;
+width = margin.left + (maxWeeks) * cellSize + margin.right;
 var userSpinner = new Spinner({
   left: '20px',
   radius: 4,
@@ -19,12 +29,6 @@ var dayInfoSpinner = new Spinner({
 }).spin(d3.select('#dayinfo-spinner').node());
 d3.select('#dayinfo-spinner').style('opacity', 0);
 var usernameInput = document.getElementById('username-input');
-var margin = {
-  top: 30,
-  bottom: 25,
-  left: 50,
-  right: 0
-};
 var svg = d3.select('#svg-calendar').attr('width', width).attr('height', height);
 var calendarSvg = svg.append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
 var labelSvg = svg.append('g');
@@ -58,9 +62,9 @@ legendSvg.selectAll()
   .append('rect')
   .classed('legend-rect', true)
   .attr('x', function(d) {
-    return legendOffset + d * (cellSize + legendPadding);
+    return legendOffsetX + d * (cellSize + legendPadding);
   })
-  .attr('y', height - margin.bottom)
+  .attr('y', legendOffsetY)
   .attr('width', cellSize)
   .attr('height', cellSize)
   .attr('fill', function(d) {
@@ -68,16 +72,16 @@ legendSvg.selectAll()
   });
 
 legendSvg.append('text')
-  .attr('x', legendOffset - legendTextPadding)
-  .attr('y', height - margin.bottom + (cellSize / 2))
+  .attr('x', legendOffsetX - legendTextPadding)
+  .attr('y', legendOffsetY + (cellSize / 2))
   .classed('legend-text', true)
   .style('text-anchor', 'end')
   .style('dominant-baseline', 'middle')
   .text('Less Edits');
 
 legendSvg.append('text')
-  .attr('x', legendOffset + (cellSize + legendPadding) * (numLegendBoxes) - legendPadding + legendTextPadding)
-  .attr('y', height - margin.bottom + (cellSize / 2))
+  .attr('x', legendOffsetX + (cellSize + legendPadding) * (numLegendBoxes) - legendPadding + legendTextPadding)
+  .attr('y', legendOffsetY + (cellSize / 2))
   .classed('legend-text', true)
   .style('text-anchor', 'start')
   .style('dominant-baseline', 'middle')
@@ -164,7 +168,7 @@ var updateData = function(data) {
   daySelect.exit().remove();
   dayRects.select('title')
     .text(function(d) {
-      return d.value + ' edits';
+      return d.value + ' edits on ' + timeFormat(d.time);
     });
   dayRects.attr("x", function(d) {
       return weeksFromStart(d.time) * cellSize;
