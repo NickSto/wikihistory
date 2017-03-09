@@ -15,6 +15,7 @@ var legendOffsetX = margin.left + cellSize * (maxWeeks - 2) - Math.ceil(64 / cel
 var legendOffsetY = margin.top + cellSize * 8;
 height = legendOffsetY + cellSize + margin.bottom;
 width = margin.left + (maxWeeks) * cellSize + margin.right;
+var colorStretch = 0.4;
 var userSpinner = new Spinner({
   left: '20px',
   radius: 4,
@@ -30,6 +31,7 @@ var dayInfoSpinner = new Spinner({
 d3.select('#dayinfo-spinner').style('opacity', 0);
 var usernameInput = document.getElementById('username-input');
 var svg = d3.select('#svg-calendar').attr('width', width).attr('height', height);
+svg.attr('viewBox', '0 0 ' + width + ' ' + height);
 var calendarSvg = svg.append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
 var labelSvg = svg.append('g');
 var legendSvg = svg.append('g');
@@ -55,7 +57,7 @@ labelSvg.selectAll('.day-label').data(dayLabels).enter()
   }).style('dominant-baseline', 'middle');
 
 var colorScale = d3.scaleSequential(d3.interpolateGreens);
-colorScale.domain([0, numLegendBoxes - 1]);
+colorScale.domain([-numLegendBoxes*colorStretch, numLegendBoxes - 1]);
 legendSvg.selectAll()
   .data(d3.range(numLegendBoxes))
   .enter()
@@ -154,9 +156,10 @@ var loadData = function() {
 var updateData = function(data) {
   var daySelect = calendarSvg.selectAll('.day').data(data);
   d3.select('#current-user').html(currUser);
-  colorScale.domain([0, d3.max(data, function(d) {
+  var maxEdits = d3.max(data, function(d) {
     return d.value;
-  })]);
+  });
+  colorScale.domain([-maxEdits * colorStretch, maxEdits]);
   var dayRects = daySelect.enter().append('rect')
     .classed('day', true)
     .attr('width', cellSize)
@@ -178,7 +181,7 @@ var updateData = function(data) {
     });
   dayRects.transition().duration(1000)
     .style('fill', function(d) {
-      return colorScale(d.value);
+      return d.value >= 1 ? colorScale(d.value) : '#fff';
     });
   var monthLabelData = [];
   data.forEach(function(d) {
