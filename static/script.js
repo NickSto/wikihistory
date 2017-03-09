@@ -171,7 +171,8 @@ var updateData = function(data) {
   daySelect.exit().remove();
   dayRects.select('title')
     .text(function(d) {
-      return d.value + ' edits on ' + timeFormat(d.time);
+    	var editStr = d.value === 1 ? 'edit' : 'edits';
+      return d.value + ' ' + editStr + ' on ' + timeFormat(d.time);
     });
   dayRects.attr("x", function(d) {
       return weeksFromStart(d.time) * cellSize;
