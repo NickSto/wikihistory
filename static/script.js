@@ -1,6 +1,21 @@
-var width = 960;
-var height = 150;
+var width;
+var height;
+var margin = {
+  top: 24,
+  bottom: 10,
+  left: 38,
+  right: 10
+};
+var maxWeeks = 54;
 var cellSize = 16;
+var legendPadding = cellSize / 4;
+var numLegendBoxes = 5;
+var legendTextPadding = 6;
+var legendOffsetX = margin.left + cellSize * (maxWeeks - 2) - Math.ceil(64 / cellSize) * cellSize - (numLegendBoxes - 1) * (legendPadding + cellSize);
+var legendOffsetY = margin.top + cellSize * 8;
+height = legendOffsetY + cellSize + margin.bottom;
+width = margin.left + (maxWeeks) * cellSize + margin.right;
+var colorStretch = 0.4;
 var userSpinner = new Spinner({
   left: '20px',
   radius: 4,
@@ -15,31 +30,66 @@ var dayInfoSpinner = new Spinner({
 }).spin(d3.select('#dayinfo-spinner').node());
 d3.select('#dayinfo-spinner').style('opacity', 0);
 var usernameInput = document.getElementById('username-input');
-var margin = {
-  top: 30,
-  bottom: 20,
-  left: 50,
-  right: 0
-};
 var svg = d3.select('#svg-calendar').attr('width', width).attr('height', height);
+svg.attr('viewBox', '0 0 ' + width + ' ' + height);
 var calendarSvg = svg.append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
 var labelSvg = svg.append('g');
+var legendSvg = svg.append('g');
 var dayLabels = [{
-  name: 'Mon',
-  day: 1,
-}, {
-  name: 'Wed',
-  day: 3,
-}, {
-  name: 'Fri',
-  day: 5
-}];
+    name: 'Mon',
+    day: 1
+  },
+  {
+    name: 'Wed',
+    day: 3
+  },
+  {
+    name: 'Fri',
+    day: 5
+  }
+];
+
 labelSvg.selectAll('.day-label').data(dayLabels).enter()
   .append('text').classed('day-label', true).text(function(d) {
     return d.name;
   }).attr('y', function(d) {
     return margin.top + (d.day + 0.5) * cellSize;
   }).style('dominant-baseline', 'middle');
+
+var colorScale = d3.scaleSequential(d3.interpolateGreens);
+colorScale.domain([-numLegendBoxes*colorStretch, numLegendBoxes - 1]);
+legendSvg.selectAll()
+  .data(d3.range(numLegendBoxes))
+  .enter()
+  .append('rect')
+  .classed('legend-rect', true)
+  .attr('x', function(d) {
+    return legendOffsetX + d * (cellSize + legendPadding);
+  })
+  .attr('y', legendOffsetY)
+  .attr('width', cellSize)
+  .attr('height', cellSize)
+  .attr('fill', function(d) {
+    return colorScale(d);
+  });
+
+legendSvg.append('text')
+  .attr('x', legendOffsetX - legendTextPadding)
+  .attr('y', legendOffsetY + (cellSize / 2))
+  .classed('legend-text', true)
+  .style('text-anchor', 'end')
+  .style('dominant-baseline', 'middle')
+  .text('Less Edits');
+
+legendSvg.append('text')
+  .attr('x', legendOffsetX + (cellSize + legendPadding) * (numLegendBoxes) - legendPadding + legendTextPadding)
+  .attr('y', legendOffsetY + (cellSize / 2))
+  .classed('legend-text', true)
+  .style('text-anchor', 'start')
+  .style('dominant-baseline', 'middle')
+  .text('More Edits');
+
+
 var currDate = new Date();
 var startDate = new Date(new Date().setFullYear(currDate.getFullYear() - 1));
 var randomData = function() {
@@ -50,9 +100,8 @@ var randomData = function() {
     };
   });
 };
-var colorScale = d3.scaleLinear().range(['#fff', '#0f0']);
 var dayInfoSelection;
-var weekOfYear = function(week) {
+var weeksFromStart = function(week) {
   return d3.timeWeek.count(d3.timeWeek(startDate), week);
 };
 var timeParse = d3.timeParse('%Y-%m-%d');
@@ -67,6 +116,13 @@ var loadData = function() {
     d3.select('#username-spinner').transition().style('opacity', 1);
     d3.json('/edits_per_day/' + username, function(err, data) {
       if (cancel) {
+        return;
+      }
+      d3.select('#username-spinner').transition().duration(1000).style('opacity', 0);
+      if (err) {
+        console.error(err);
+        currUser = "Error Loading User";
+        updateData(randomData());
         return;
       }
       currUser = username;
@@ -99,10 +155,11 @@ var loadData = function() {
 
 var updateData = function(data) {
   var daySelect = calendarSvg.selectAll('.day').data(data);
-  colorScale.domain([0, d3.max(data, function(d) {
+  d3.select('#current-user').html(currUser);
+  var maxEdits = d3.max(data, function(d) {
     return d.value;
-  })]);
-  d3.select('#username-spinner').transition().duration(1000).style('opacity', 0);
+  });
+  colorScale.domain([-maxEdits * colorStretch, maxEdits]);
   var dayRects = daySelect.enter().append('rect')
     .classed('day', true)
     .attr('width', cellSize)
@@ -114,17 +171,18 @@ var updateData = function(data) {
   daySelect.exit().remove();
   dayRects.select('title')
     .text(function(d) {
-      return d.value + ' edits';
+    	var editStr = d.value === 1 ? 'edit' : 'edits';
+      return d.value + ' ' + editStr + ' on ' + timeFormat(d.time);
     });
   dayRects.attr("x", function(d) {
-      return weekOfYear(d.time) * cellSize;
+      return weeksFromStart(d.time) * cellSize;
     })
     .attr("y", function(d) {
       return d.time.getDay() * cellSize;
     });
   dayRects.transition().duration(1000)
     .style('fill', function(d) {
-      return colorScale(d.value);
+      return d.value >= 1 ? colorScale(d.value) : '#fff';
     });
   var monthLabelData = [];
   data.forEach(function(d) {
@@ -132,7 +190,7 @@ var updateData = function(data) {
     if (time.getDate() === 14) {
       monthLabelData.push({
         name: monthNames[time.getMonth()],
-        week: weekOfYear(d.time)
+        week: weeksFromStart(d.time)
       });
     }
   });
@@ -152,20 +210,26 @@ var updateData = function(data) {
   monthLabelSelect.exit().remove();
 };
 var currUser = '';
-var loadDayInfo = function (d) {
-  if(!currUser) {
+var loadDayInfo = function(d) {
+  if (!currUser) {
     return;
   }
   d3.select('#dayinfo-spinner').transition().duration(1000).style('opacity', 1);
-  d3.json('/day_edits/'+currUser+'/'+timeFormat(d.time), function(err, data) {
+  d3.json('/day_edits/' + currUser + '/' + timeFormat(d.time), function(err, data) {
+    d3.select('#dayinfo-spinner').transition().duration(1000).style('opacity', 0);
+    if (err) {
+      console.error(err);
+      d3.select('#dayinfo-status').html('Error loading info for ' + timeFormat(d.time));
+      return;
+    }
     updateDayInfo({
       time: d.time,
-      articles: data.map(function(d){
+      articles: data.map(function(d) {
         return {
           name: d.title,
-          articleLink: 'http://en.wikipedia.org/wiki/'+d.title,
+          articleLink: 'http://en.wikipedia.org/wiki/' + d.title,
           count: d.edits
-        }
+        };
       })
     });
   });
@@ -173,9 +237,7 @@ var loadDayInfo = function (d) {
 
 var dayInfoTable = d3.select('#dayinfo-table');
 var updateDayInfo = function(dayInfo) {
-  d3.select('#dayinfo-spinner').transition().duration(1000).style('opacity', 0);
-  var sel = dayInfoTable;
-  var selUpdate = sel.selectAll('.article-row')
+  var selUpdate = dayInfoTable.selectAll('.article-row')
     .data(dayInfo.articles);
   var newSel = selUpdate.enter()
     .append('tr')
@@ -183,24 +245,22 @@ var updateDayInfo = function(dayInfo) {
   newSel.append('td').classed('article-name', true);
   newSel.append('td').classed('article-count', true);
   var sel = newSel.merge(selUpdate);
+  var status;
   if (dayInfo.articles.length) {
     sel.select('.article-name').html(function(d) {
-      return '<a href="'+d.articleLink+'">' + d.name + '</a>';
+      return '<a href="' + d.articleLink + '">' + d.name + '</a>';
     });
     sel.select('.article-count').html(function(d) {
       return d.count;
     });
-    d3.select('#dayinfo-status').html('Edits on '+timeFormat(dayInfo.time));
+    status = 'Edits on ' + timeFormat(dayInfo.time);
   } else {
-    d3.select('#dayinfo-status').html('No edits on ' + timeFormat(dayInfo.time));
+    status = 'No edits on ' + timeFormat(dayInfo.time);
   }
+  d3.select('#dayinfo-status').html(status);
   selUpdate.exit().remove();
 };
 
-/*d3.select('#input-form').node().addEventListener('submit', function(e) {
-  e.preventDefault();
-});
-*/
 usernameInput.addEventListener('change', function() {
   loadData();
 });
