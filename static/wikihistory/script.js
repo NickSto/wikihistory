@@ -1,3 +1,5 @@
+var urlBase = '/wikihistory';
+var urlSuffix = '?via=js';
 var width = 960;
 var height = 150;
 var cellSize = 16;
@@ -65,7 +67,7 @@ var loadData = function() {
   var cancel = false;
   if (username) {
     d3.select('#username-spinner').transition().style('opacity', 1);
-    d3.json('/edits_per_day/' + username, function(err, data) {
+    d3.json(urlBase+'/edits_per_day/'+username+urlSuffix, function(err, data) {
       if (cancel) {
         return;
       }
@@ -157,7 +159,7 @@ var loadDayInfo = function (d) {
     return;
   }
   d3.select('#dayinfo-spinner').transition().duration(1000).style('opacity', 1);
-  d3.json('/day_edits/'+currUser+'/'+timeFormat(d.time), function(err, data) {
+  d3.json(urlBase+'/day_edits/'+currUser+'/'+timeFormat(d.time)+urlSuffix, function(err, data) {
     updateDayInfo({
       time: d.time,
       articles: data.map(function(d){
