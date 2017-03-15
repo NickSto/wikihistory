@@ -8,15 +8,22 @@
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
 
   <style>
-    .day-label,
-    .month-label {
+    svg {
       font-family: sans-serif;
+    }
+    
+    .legend-text {
+      font-size: 12px;
     }
     
     .day {
       fill: #fff;
       stroke: #ccc;
       cursor: pointer;
+    }
+    
+    .legend-rect {
+      stroke: #ccc;
     }
     
     .spinner {
@@ -30,6 +37,10 @@
     #dayinfo-spinner {
       position: absolute;
       left: 50%;
+    }
+    #svg-calendar {
+    	width: 100%;
+    	height: auto;
     }
   </style>
 </head>
@@ -49,21 +60,22 @@
         <div class="navbar-form navbar-left">
           <div class="form-group">
             <input type="text" class="form-control" placeholder="Username" value="Jimbo Wales" id="username-input">
-            <button class = 'btn btn-default'>Go</button>
-        <span id="username-spinner" class="spinner"></span>
+            <button class='btn btn-default'>Go</button>
+            <span id="username-spinner" class="spinner"></span>
           </div>
         </div>
       </div>
     </div>
   </nav>
   <div class="container">
+    <h2 id="current-user"></h2>
     <svg id="svg-calendar"></svg>
     <div id="results">
       <div id="dayinfo-spinner" class="spinner"></div>
       <div id="results-info">
         <div id="dayinfo-status"></div>
         <div class="row">
-          <div class="col-md-4">
+          <div class="col-sm-4">
             <table id="dayinfo-table" class="table table-bordered table-hover"></table>
           </div>
         </div>
